@@ -1,0 +1,77 @@
+
+# PRACTICA 3 - SERVIDOR DE IMPRESION CUPS
+# Sistema operativo: Red Hat Enterprise Linux 10.2
+# Nombre: Ariel de Jesus Ramirez Colon
+# Matricula: 20260592
+
+# 1. VERIFICAR RED
+ip -4 addr show ens160
+ping -c 4 google.com
+
+# 2. INSTALAR CUPS
+sudo dnf install cups -y
+sudo systemctl start cups
+sudo systemctl enable cups
+sudo systemctl status cups
+
+# 3. INSTALAR CUPS-PDF
+sudo dnf repolist
+sudo dnf install epel-release -y
+
+# Alternativa si epel-release no aparece:
+sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm -y
+
+sudo dnf install cups-pdf -y
+rpm -q cups-pdf
+
+# 4. CONFIGURAR IMPRESORA PDF
+# Abrir en Firefox: http://localhost:631
+
+sudo lpinfo -v
+lpinfo -m | grep -i pdf
+ls /usr/share/cups/model/
+lpstat -p -d
+
+# Alternativa manual si existe el PPD
+# y no se creo desde CUPS:
+ls -l /usr/share/cups/model/CUPS-PDF_opt.ppd
+sudo lpadmin -p PDF -E -v cups-pdf:/ -P /usr/share/cups/model/CUPS-PDF_opt.ppd
+
+sudo lpadmin -d PDF
+
+# 5. COMPARTIR IMPRESORA
+sudo cupsctl --share-printers
+sudo lpadmin -p PDF -o printer-is-shared=true
+sudo firewall-cmd --permanent --add-port=631/tcp
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-all
+sudo systemctl restart cups
+sudo ss -tlnp | grep 631
+
+# 6. CONFIGURACION DE RED
+ip -4 addr show ens160
+sudo nano /etc/cups/cupsd.conf
+
+# Desde PowerShell en Windows, reemplazar la IP:
+# Test-NetConnection 10.0.0.36 -Port 631
+
+# URL de impresora:
+# http://10.0.0.36:631/printers/PDF
+
+# 7. PRUEBA DE IMPRESION
+echo "Prueba de impresion CUPS - Matricula 20260592" | lp -d PDF
+lpstat -W completed -o PDF
+
+sudo find /home /var/spool/cups-pdf -type f -iname "*.pdf" 2>/dev/null
+
+grep -E '^[[:space:]]*(Out|AnonDir|AnonUser)' /etc/cups/cups-pdf.conf
+
+sudo tail -n 30 /var/log/cups/error_log
+
+# 8. VERIFICACION FINAL
+sudo systemctl status cups
+rpm -q cups-pdf
+lpstat -p -d
+sudo ss -tlnp | grep 631
+lpstat -W completed -o
+  

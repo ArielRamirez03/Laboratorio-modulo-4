@@ -1,0 +1,66 @@
+
+1. COMPROBAR RED
+ip addr
+ping -c 4 8.8.8.8
+
+2. ACTUALIZAR E INSTALAR
+sudo dnf update -y
+sudo dnf install postfix -y
+sudo dnf install -y s-nail cyrus-sasl-plain nano
+sudo systemctl enable --now postfix
+sudo systemctl status postfix
+
+3. RESPALDAR CONFIGURACION
+sudo cp /etc/postfix/main.cf /etc/postfix/main.cf.bak
+
+4. CONFIGURAR POSTFIX (IPv4 + Gmail SMTP + LMDB)
+sudo postconf -e 'relayhost = [smtp.gmail.com]:587'
+sudo postconf -e 'inet_protocols = ipv4'
+sudo postconf -e 'smtp_sasl_auth_enable = yes'
+sudo postconf -e 'smtp_sasl_password_maps = lmdb:/etc/postfix/sasl_passwd'
+sudo postconf -e 'smtp_sasl_security_options = noanonymous'
+sudo postconf -e 'smtp_sasl_tls_security_options = noanonymous'
+sudo postconf -e 'smtp_tls_security_level = encrypt'
+sudo postconf -e 'inet_interfaces = loopback-only'
+sudo postconf -n
+
+5. CREAR CONTRASENA DE APLICACION EN GOOGLE
+https://myaccount.google.com/apppasswords
+Requiere verificacion en dos pasos y que la opcion este disponible.
+NO copiar la contrasena real en este TXT ni en GitHub.
+
+6. CONFIGURAR CREDENCIALES LOCALMENTE (NO SUBIR EL ARCHIVO)
+sudo nano /etc/postfix/sasl_passwd
+
+Ejemplo del contenido (SOLO PLANTILLA; NO ES UNA CREDENCIAL REAL):
+[smtp.gmail.com]:587 TU_CORREO@gmail.com:TU_CONTRASENA_DE_APLICACION
+
+Guardar con Ctrl+O, Enter y Ctrl+X.
+sudo chmod 600 /etc/postfix/sasl_passwd
+sudo postmap lmdb:/etc/postfix/sasl_passwd
+sudo chmod 600 /etc/postfix/sasl_passwd.lmdb
+sudo ls -l /etc/postfix/sasl_passwd*
+
+7. VALIDAR Y REINICIAR
+sudo postfix check
+sudo systemctl restart postfix
+sudo systemctl status postfix
+
+8. ENVIAR CORREO DE PRUEBA
+echo 'Prueba de funcionamiento de Postfix' | mail -r TU_CORREO@gmail.com -s 'Prueba SMTP' TU_CORREO@gmail.com
+sudo postqueue -p
+sudo journalctl --since '10 minutes ago' --no-pager | grep -i postfix
+
+9. ENVIAR CORREO SOLICITADO AL PROFESOR
+printf 'Nombre: Ariel de Jesus Ramirez Colon\nMatricula: 20260592\n' | mail -r TU_CORREO@gmail.com -s 'MambruSeFueALaGuerra' os3conadrian@gmail.com
+
+10. VERIFICAR ENTREGA
+sudo postqueue -p
+sudo journalctl --since '10 minutes ago' --no-pager | grep -i postfix
+
+En los registros, status=sent y 250 2.0.0 OK indican aceptacion por el siguiente servidor SMTP.
+La recepcion final en el buzon del profesor debe confirmarse aparte.
+
+11. SOLO SI QUEDAN MENSAJES PENDIENTES Y SE CORRIGIO EL ERROR
+sudo postqueue -f
+sudo postqueue -p

@@ -1,0 +1,118 @@
+
+# PRACTICA 1 - SERVIDOR HTTP APACHE
+# Sistema operativo: Red Hat Enterprise Linux 10.2
+# Nombre: Ariel de Jesus Ramirez Colon
+# Matricula: 20260592
+
+# 1. INSTALAR APACHE
+sudo dnf install httpd -y
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl status httpd
+
+# 2. CREAR PRIMERA PAGINA WEB - HOLA MUNDO
+sudo mkdir -p /var/www/hola
+sudo nano /var/www/hola/index.html
+
+# CONTENIDO DE /var/www/hola/index.html
+# <!DOCTYPE html>
+# <html>
+# <head>
+#     <meta charset="UTF-8">
+#     <title>Mi primera pagina</title>
+# </head>
+# <body>
+#     <h1>Hola Mundo</h1>
+# </body>
+# </html>
+
+# 3. CONFIGURAR HOST VIRTUAL PUERTO 80
+sudo nano /etc/httpd/conf.d/hola.conf
+
+# CONTENIDO DE hola.conf
+# <VirtualHost *:80>
+#     ServerName localhost
+#     DocumentRoot /var/www/hola
+#     <Directory /var/www/hola>
+#         Require all granted
+#     </Directory>
+# </VirtualHost>
+
+# 4. CREAR SEGUNDA PAGINA WEB
+sudo mkdir -p /var/www/estudiante
+sudo nano /var/www/estudiante/index.html
+
+# CONTENIDO DE /var/www/estudiante/index.html
+# <!DOCTYPE html>
+# <html>
+# <head>
+#     <meta charset="UTF-8">
+#     <title>Datos del estudiante</title>
+# </head>
+# <body>
+#     <h1>Datos del estudiante</h1>
+#     <h2>Nombre:</h2>
+#     <p>Ariel de Jesus Ramirez Colon</p>
+#     <h2>Matricula:</h2>
+#     <p>20260592</p>
+#     <h2>Materia:</h2>
+#     <p>Sistemas Operativos</p>
+# </body>
+# </html>
+
+# 5. CONFIGURAR HOST VIRTUAL PUERTO 8080
+sudo nano /etc/httpd/conf.d/puerto8080.conf
+
+# CONTENIDO DE puerto8080.conf
+# Listen 8080
+# <VirtualHost *:8080>
+#     ServerName localhost
+#     DocumentRoot /var/www/estudiante
+#     <Directory /var/www/estudiante>
+#         Require all granted
+#     </Directory>
+# </VirtualHost>
+
+# 6. COMPROBAR CONFIGURACION DEL PUERTO
+sudo grep -Rn 'Listen 8080' /etc/httpd/
+
+# 7. CONFIGURAR SELINUX
+sudo dnf install policycoreutils-python-utils -y
+sudo semanage port -l | grep http_port_t
+
+# Solo si 8080 no esta autorizado:
+sudo semanage port -a -t http_port_t -p tcp 8080
+
+ls -Zd /var/www/hola /var/www/estudiante
+
+# Solo si es necesario y no existen las reglas:
+sudo semanage fcontext -a -t httpd_sys_content_t '/var/www/hola(/.*)?'
+sudo semanage fcontext -a -t httpd_sys_content_t '/var/www/estudiante(/.*)?'
+
+sudo restorecon -Rv /var/www/hola /var/www/estudiante
+
+# 8. CONFIGURAR FIREWALL
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-all
+
+# 9. VERIFICAR Y REINICIAR APACHE
+sudo apachectl configtest
+sudo systemctl restart httpd
+sudo systemctl status httpd
+sudo ss -tlnp | grep httpd
+
+# 10. PROBAR PAGINAS WEB
+curl http://localhost:80
+curl http://localhost:8080
+ip -4 addr show ens160
+
+# DIRECCIONES EN EL NAVEGADOR
+# http://localhost:80
+# http://localhost:8080
+
+# Desde Windows usar la IP actual de Red Hat:
+# http://10.0.0.36:80
+# http://10.0.0.36:8080
+  
